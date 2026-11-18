@@ -1,0 +1,22 @@
+name: sars2-vc
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - nextflow
+  - openjdk=21
+  - fastqc
+  - multiqc
+  - fastp
+  - bwa
+  - samtools
+  - bcftools
+  - mosdepth
+  - lofreq
+  - snpeff
+  - nextclade
+  - pangolin
+  - python=3.11
+  - pandas
+  - matplotlib
+  - seaborn

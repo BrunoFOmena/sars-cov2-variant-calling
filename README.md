@@ -142,7 +142,7 @@ SRA (ENA mirror) ──► raw FASTQ (R1/R2)
 
 - [x] Assess hardware and dataset size
 - [x] Verify accessions (SRR10903401, SRR10903402, NC_045512.2)
-- [ ] Set up the conda environment
+- [x] Set up the conda environment
 - [ ] Data download script
 - [ ] QC, trimming, alignment
 - [ ] Variant calling and annotation
