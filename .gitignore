@@ -1,4 +1,4 @@
-data/
+data/raw/
 results/
 work/
 .nextflow*

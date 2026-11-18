@@ -1,0 +1,7 @@
+file	source_url	bytes	checksum_type	checksum	retrieved_utc
+data/raw/SRR10903401/SRR10903401_1.fastq.gz	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR109/001/SRR10903401/SRR10903401_1.fastq.gz	15298337	md5	5441488c3aa53f50842227d67c54ed6b	2026-11-18T19:29:23Z
+data/raw/SRR10903401/SRR10903401_2.fastq.gz	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR109/001/SRR10903401/SRR10903401_2.fastq.gz	15951093	md5	1847c546dc305e5b28060edeeae74288	2026-11-18T19:29:45Z
+data/raw/SRR10903402/SRR10903402_1.fastq.gz	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR109/002/SRR10903402/SRR10903402_1.fastq.gz	23118422	md5	578ce19cd1a0e73457a7faef740f820f	2026-11-18T19:34:36Z
+data/raw/SRR10903402/SRR10903402_2.fastq.gz	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR109/002/SRR10903402/SRR10903402_2.fastq.gz	24232164	md5	bcfa913389980c91d5a78f47a0c60ca1	2026-11-18T19:40:17Z
+data/reference/NC_045512.2.fasta	https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=NC_045512.2&rettype=fasta&retmode=text	30429	sha256	0891c00cc2d503f58e0c600ce5ee64e9c64b939525c70d5486bc46cbc7cb073e	2026-11-18T19:40:18Z
+data/reference/NC_045512.2.gff3	https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=NC_045512.2&rettype=gff3&retmode=text	14704	sha256	854bd3e750ccb9a9896a7a4ca1fff66e19e5b6ee07e8bd690d8f994365ec3a63	2026-11-18T19:40:18Z
