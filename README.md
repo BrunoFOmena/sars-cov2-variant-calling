@@ -28,6 +28,13 @@ and are also the example dataset of the [V-pipe](https://cbg-ethz.github.io/V-pi
 of reads may be human/host. The mapping rate and the depth across the genome are therefore a QC result to be
 reported, not an assumption. Any region with low coverage will be masked in the consensus.
 
+### Data provenance
+
+`bash scripts/download_data.sh` fetches everything and writes `data/MANIFEST.tsv`. Reads come from the ENA mirror of
+the SRA and are verified against the md5 reported by ENA; the reference FASTA and GFF3 come from NCBI E-utilities and
+are recorded with a sha256. The raw FASTQ files are not committed (git-ignored), but the manifest is, so any
+download can be checked against exactly what was used in the analysis.
+
 ## Compute budget
 
 Measured on the development machine (WSL2 on Windows):
@@ -123,7 +130,11 @@ SRA (ENA mirror) ──► raw FASTQ (R1/R2)
 ├── nextflow.config        # accessions, paths, thresholds, profiles
 ├── modules/               # one process module per tool
 ├── bin/                   # plotting and summary helper scripts
-├── data/                  # raw reads and reference (git-ignored)
+├── scripts/               # setup helpers (data download)
+├── data/
+│   ├── raw/               # raw FASTQ files (git-ignored, restored by the download script)
+│   ├── reference/         # NC_045512.2 FASTA + GFF3 (tracked)
+│   └── MANIFEST.tsv       # source URL, size, checksum and date of every file (tracked)
 ├── results/               # pipeline outputs (large files git-ignored)
 └── docs/                  # figures and report used in the README
 ```
@@ -143,7 +154,7 @@ SRA (ENA mirror) ──► raw FASTQ (R1/R2)
 - [x] Assess hardware and dataset size
 - [x] Verify accessions (SRR10903401, SRR10903402, NC_045512.2)
 - [x] Set up the conda environment
-- [ ] Data download script
+- [x] Data download script (`scripts/download_data.sh`)
 - [ ] QC, trimming, alignment
 - [ ] Variant calling and annotation
 - [ ] Consensus and lineage
