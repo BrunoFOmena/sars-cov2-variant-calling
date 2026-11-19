@@ -7,6 +7,7 @@ include { FASTP; MULTIQC           } from './modules/qc'
 include { BWA_INDEX; BWA_MEM; ALIGNMENT_STATS; MOSDEPTH } from './modules/align'
 include { LOFREQ; FILTER_VARIANTS; SNPEFF; CONSENSUS; PILEUP_CHECK } from './modules/variants'
 include { VALIDATE_AND_PLOT } from './modules/report'
+include { NEXTCLADE_DATASET; PANGOLIN; NEXTCLADE } from './modules/lineage'
 
 workflow {
     reads_ch = channel.fromFilePairs(params.reads, checkIfExists: true)
@@ -29,6 +30,11 @@ workflow {
         .map { sample, vcf, tbi -> [sample, vcf, tbi] }
         .join(MOSDEPTH.out.per_base.map { f -> [f.name.replace('.per-base.bed.gz', ''), f] })
     CONSENSUS(consensus_in, reference)
+
+    all_consensus = CONSENSUS.out.fasta.collect()
+    PANGOLIN(all_consensus)
+    NEXTCLADE_DATASET()
+    NEXTCLADE(all_consensus, NEXTCLADE_DATASET.out.dataset)
 
     PILEUP_CHECK(FILTER_VARIANTS.out.join(BWA_MEM.out), reference)
 

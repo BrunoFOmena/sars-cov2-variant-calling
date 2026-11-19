@@ -4,3 +4,4 @@ work/
 .nextflow*
 data/reference/*.fasta.*
 data/reference/bwa_index/
+data/nextclade_dataset/
