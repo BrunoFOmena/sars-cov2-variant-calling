@@ -35,6 +35,24 @@ the SRA and are verified against the md5 reported by ENA; the reference FASTA an
 are recorded with a sha256. The raw FASTQ files are not committed (git-ignored), but the manifest is, so any
 download can be checked against exactly what was used in the analysis.
 
+## Preliminary results: dataset check
+
+Raw-read QC (FastQC + MultiQC, report in [`docs/qc/multiqc_raw.html`](docs/qc/multiqc_raw.html)) and a quick BWA mapping
+against NC_045512.2 ([`docs/qc/mapping_summary.tsv`](docs/qc/mapping_summary.tsv)):
+
+| Sample | Reads | Mapped to SARS-CoV-2 | Mean depth | Genome >=10x | Genome >=30x |
+|---|---|---|---|---|---|
+| SRR10903401 | 953,264 | 3.1% | 139.8x | 99.9% | 97.8% |
+| SRR10903402 | 1,353,388 | 8.3% | 539.2x | 99.9% | 99.7% |
+
+- As suspected, most reads are not viral (host and other RNA), only 3-8% map to the virus.
+- Even so, absolute depth is high because the genome is tiny: both samples cover essentially the whole genome at
+  >=30x, which is enough for confident variant calling. **The original dataset is kept; the ARTIC alternative is not
+  needed.**
+- FastQC flags adapter content and duplication levels in all files, which supports the trimming step. Per-base quality passes.
+- Duplicates are not removed (see the strategy section): at this depth on a 30 kb genome, positional duplicates are
+  expected.
+
 ## Compute budget
 
 Measured on the development machine (WSL2 on Windows):
@@ -155,7 +173,8 @@ SRA (ENA mirror) ──► raw FASTQ (R1/R2)
 - [x] Verify accessions (SRR10903401, SRR10903402, NC_045512.2)
 - [x] Set up the conda environment
 - [x] Data download script (`scripts/download_data.sh`)
-- [ ] QC, trimming, alignment
+- [x] Raw QC and exploratory mapping check (`scripts/qc_raw_and_mapping_check.sh`)
+- [ ] Trimming, final alignment and alignment QC
 - [ ] Variant calling and annotation
 - [ ] Consensus and lineage
 - [ ] Figures and results section in this README
