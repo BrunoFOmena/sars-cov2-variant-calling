@@ -64,6 +64,10 @@ bash scripts/download_data.sh
 nextflow run main.nf -profile local     # or -profile conda to let Nextflow build the environment
 ```
 
+`-profile conda` was tested from scratch (fresh environment, 26 processes, ~5 min, mostly environment creation) and
+produced identical consensus sequences, variant tables and lineage calls to the `local` profile. The full
+environment needs a few GB, so make sure the Nextflow work directory is not on a small `/tmp` partition (use `-w`).
+
 Thresholds (all in `nextflow.config`): variants kept if QUAL >= 30, depth >= 10 and allele frequency >= 0.05; only
 variants with AF >= 0.5 are applied to the consensus; positions below 10x are masked as `N`.
 
