@@ -53,6 +53,48 @@ against NC_045512.2 ([`docs/qc/mapping_summary.tsv`](docs/qc/mapping_summary.tsv
 - Duplicates are not removed (see the strategy section): at this depth on a 30 kb genome, positional duplicates are
   expected.
 
+## Pipeline results
+
+Implemented in Nextflow (DSL2): [`main.nf`](main.nf), [`nextflow.config`](nextflow.config) and one module per stage in
+[`modules/`](modules/). A clean run (no cache) of the 22 processes for both samples takes **~53 s** on the laptop.
+
+```bash
+micromamba activate sars2-vc
+bash scripts/download_data.sh
+nextflow run main.nf -profile local     # or -profile conda to let Nextflow build the environment
+```
+
+Thresholds (all in `nextflow.config`): variants kept if QUAL >= 30, depth >= 10 and allele frequency >= 0.05; only
+variants with AF >= 0.5 are applied to the consensus; positions below 10x are masked as `N`.
+
+| | SRR10903401 | SRR10903402 |
+|---|---|---|
+| Read pairs after fastp (before) | 396,081 (476,632) | 583,438 (676,694) |
+| Reads with adapters trimmed | 208,927 | 295,145 |
+| Variants reported (AF >= 0.05) | 13 (3 indels) | 5 (0 indels) |
+| Variants with AF >= 0.5 | 0 | 0 |
+| Consensus | 29,903 bp, 42 N | 29,903 bp, 39 N |
+
+Outputs in [`docs/results/`](docs/results/): annotated variant tables (`*.variants.tsv`), consensus FASTAs, the MultiQC
+report and the Nextflow trace.
+
+### Interpretation (and what it does not show)
+
+- **Both consensus genomes are identical to Wuhan-Hu-1** apart from masked positions: no variant reached 50% allele
+  frequency. This fits samples from the very beginning of the outbreak, but lineage assignment is still pending, so
+  this is an expectation to confirm and not a result yet.
+- **All reported variants are minor (sub-clonal) variants**, mostly at 5-10% frequency. In RNA-seq data from clinical
+  samples, reverse-transcription errors and sequencing artifacts also produce calls in this range, so these should not
+  be read as real intra-host variation without further evidence. The shared call `1821 G>A` (p.Gly519Asp) appearing in
+  both samples at low frequency is one example worth checking.
+- **One candidate worth following up:** `24323 A>C` in the spike gene (p.Lys921Gln) in SRR10903401, 38.9% allele
+  frequency at 319x depth with a very high quality score. That is much stronger evidence than the 5% calls, although
+  it still needs a second caller and a look at the alignment before it is trusted.
+- The high-impact calls (a stop-gain at AF 0.057 and two frameshifts at AF 0.057 and 0.125) are exactly the kind of
+  low-frequency indel/stop events most likely to be artifacts.
+- Next validation steps: an independent caller (bcftools), strand-bias inspection, and a stricter frequency threshold
+  as a sensitivity analysis.
+
 ## Compute budget
 
 Measured on the development machine (WSL2 on Windows):
@@ -174,10 +216,10 @@ SRA (ENA mirror) ──► raw FASTQ (R1/R2)
 - [x] Set up the conda environment
 - [x] Data download script (`scripts/download_data.sh`)
 - [x] Raw QC and exploratory mapping check (`scripts/qc_raw_and_mapping_check.sh`)
-- [ ] Trimming, final alignment and alignment QC
-- [ ] Variant calling and annotation
-- [ ] Consensus and lineage
-- [ ] Figures and results section in this README
+- [x] Nextflow pipeline: fastp trimming, BWA alignment, alignment QC, LoFreq calling, SnpEff annotation, consensus, MultiQC
+- [ ] Lineage assignment (Pangolin / Nextclade)
+- [ ] Cross-check with an independent caller (bcftools)
+- [ ] Figures (coverage profile, allele-frequency plot) and sample comparison
 
 ## Reproducibility
 
