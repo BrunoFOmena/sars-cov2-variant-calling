@@ -1,282 +1,213 @@
 # SARS-CoV-2 Variant Calling Pipeline
 
-A reproducible, laptop-friendly pipeline that goes from raw paired-end Illumina reads to an annotated list of
-SARS-CoV-2 variants, a consensus genome and a lineage assignment.
+An end-to-end, reproducible [Nextflow](https://www.nextflow.io/) pipeline that takes raw paired-end Illumina reads
+to an annotated variant table, a consensus genome and a lineage assignment, and checks its own variant calls.
+It runs on a laptop in about a minute.
 
-> **Status:** planning phase. This README documents the strategy; results and figures will be added as each
-> stage is implemented.
+![Nextflow](https://img.shields.io/badge/Nextflow-DSL2-0dc09d)
+![Conda](https://img.shields.io/badge/env-conda%20%2F%20micromamba-44a833)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-## Goals
+## Summary
 
-1. Build an end-to-end variant calling workflow with standard, widely used bioinformatics tools.
-2. Keep it fully reproducible (pinned environment, workflow manager, scripted downloads).
-3. Run on a consumer laptop in minutes, not hours.
-4. Produce portfolio-ready outputs: QC reports, coverage plots, an annotated variant table and a consensus genome.
-
-## Data
-
-| Item | Accession | Details |
-|---|---|---|
-| Sample 1 | [SRR10903401](https://www.ncbi.nlm.nih.gov/sra/SRR10903401) | Illumina MiSeq, paired-end, 476,632 read pairs, ~144 Mbp, ~31 MB FASTQ.gz |
-| Sample 2 | [SRR10903402](https://www.ncbi.nlm.nih.gov/sra/SRR10903402) | Illumina MiSeq, paired-end, 676,694 read pairs, ~204 Mbp, ~47 MB FASTQ.gz |
-| Reference | [NC_045512.2](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512.2) | Wuhan-Hu-1, complete genome, 29,903 bp (accession verified against NCBI) |
-
-The reads come from the study published in *National Science Review* ([doi:10.1093/nsr/nwaa036](https://doi.org/10.1093/nsr/nwaa036))
-and are also the example dataset of the [V-pipe](https://cbg-ethz.github.io/V-pipe/) tutorial.
-
-**Caveat:** the library strategy is RNA-Seq (metatranscriptomics) from a human clinical sample, so a large share
-of reads may be human/host. The mapping rate and the depth across the genome are therefore a QC result to be
-reported, not an assumption. Any region with low coverage will be masked in the consensus.
-
-### Data provenance
-
-`bash scripts/download_data.sh` fetches everything and writes `data/MANIFEST.tsv`. Reads come from the ENA mirror of
-the SRA and are verified against the md5 reported by ENA; the reference FASTA and GFF3 come from NCBI E-utilities and
-are recorded with a sha256. The raw FASTQ files are not committed (git-ignored), but the manifest is, so any
-download can be checked against exactly what was used in the analysis.
-
-## Preliminary results: dataset check
-
-Raw-read QC (FastQC + MultiQC, report in [`docs/qc/multiqc_raw.html`](docs/qc/multiqc_raw.html)) and a quick BWA mapping
-against NC_045512.2 ([`docs/qc/mapping_summary.tsv`](docs/qc/mapping_summary.tsv)):
-
-| Sample | Reads | Mapped to SARS-CoV-2 | Mean depth | Genome >=10x | Genome >=30x |
-|---|---|---|---|---|---|
-| SRR10903401 | 953,264 | 3.1% | 139.8x | 99.9% | 97.8% |
-| SRR10903402 | 1,353,388 | 8.3% | 539.2x | 99.9% | 99.7% |
-
-- As suspected, most reads are not viral (host and other RNA), only 3-8% map to the virus.
-- Even so, absolute depth is high because the genome is tiny: both samples cover essentially the whole genome at
-  >=30x, which is enough for confident variant calling. **The original dataset is kept; the ARTIC alternative is not
-  needed.**
-- FastQC flags adapter content and duplication levels in all files, which supports the trimming step. Per-base quality passes.
-- Duplicates are not removed (see the strategy section): at this depth on a 30 kb genome, positional duplicates are
-  expected.
-
-## Pipeline results
-
-Implemented in Nextflow (DSL2): [`main.nf`](main.nf), [`nextflow.config`](nextflow.config) and one module per stage in
-[`modules/`](modules/). A clean run (no cache) of the 22 processes for both samples takes **~53 s** on the laptop.
-
-```bash
-micromamba activate sars2-vc
-bash scripts/download_data.sh
-nextflow run main.nf -profile local     # or -profile conda to let Nextflow build the environment
-```
-
-`-profile conda` was tested from scratch (fresh environment, 26 processes, ~5 min, mostly environment creation) and
-produced identical consensus sequences, variant tables and lineage calls to the `local` profile. The full
-environment needs a few GB, so make sure the Nextflow work directory is not on a small `/tmp` partition (use `-w`).
-
-Thresholds (all in `nextflow.config`): variants kept if QUAL >= 30, depth >= 10 and allele frequency >= 0.05; only
-variants with AF >= 0.5 are applied to the consensus; positions below 10x are masked as `N`.
+Two public SARS-CoV-2 clinical samples ([SRR10903401](https://www.ncbi.nlm.nih.gov/sra/SRR10903401) and
+[SRR10903402](https://www.ncbi.nlm.nih.gov/sra/SRR10903402), early 2020) were analysed against the Wuhan-Hu-1
+reference (NC_045512.2).
 
 | | SRR10903401 | SRR10903402 |
 |---|---|---|
-| Read pairs after fastp (before) | 396,081 (476,632) | 583,438 (676,694) |
-| Reads with adapters trimmed | 208,927 | 295,145 |
-| Variants reported (AF >= 0.05) | 13 (3 indels) | 5 (0 indels) |
-| Variants with AF >= 0.5 | 0 | 0 |
-| Consensus | 29,903 bp, 42 N | 29,903 bp, 39 N |
+| Read pairs (raw → after trimming) | 476,632 → 396,081 | 676,694 → 583,438 |
+| Reads mapping to SARS-CoV-2 | 3.1% | 8.3% |
+| Mean depth / genome ≥30x | 140x / 97.8% | 539x / 99.7% |
+| Minor variants reported (AF ≥ 5%) | 13 (3 indels) | 5 |
+| Variants at majority frequency (AF ≥ 50%) | 0 | 0 |
+| Lineage (Pango / Nextstrain clade) | B / 19A | B / 19A |
 
-Outputs in [`docs/results/`](docs/results/): annotated variant tables (`*.variants.tsv`), consensus FASTAs, the MultiQC
-report and the Nextflow trace.
+**Main findings**
 
-### Interpretation (and what it does not show)
-
-- **Both consensus genomes are identical to Wuhan-Hu-1** apart from masked positions: no variant reached 50% allele
-  frequency. This fits samples from the very beginning of the outbreak, and the lineage assignment below confirms it.
-- **All reported variants are minor (sub-clonal) variants**, mostly at 5-10% frequency. In RNA-seq data from clinical
-  samples, reverse-transcription errors and sequencing artifacts also produce calls in this range, so these should not
-  be read as real intra-host variation without further evidence. The shared call `1821 G>A` (p.Gly519Asp) appearing in
-  both samples at low frequency is one example worth checking.
-- **One candidate worth following up:** `24323 A>C` in the spike gene (p.Lys921Gln) in SRR10903401, 38.9% allele
-  frequency at 319x depth with a very high quality score. That is much stronger evidence than the 5% calls, although
-  it still needs a second caller and a look at the alignment before it is trusted.
-- The high-impact calls (a stop-gain at AF 0.057 and two frameshifts at AF 0.057 and 0.125) are exactly the kind of
-  low-frequency indel/stop events most likely to be artifacts.
-
-### Lineage assignment
-
-Pangolin 4.4 (data release v1.41) and Nextclade 3.29.1 (dataset tag 2026-10-28--15-04-26Z), run on the consensus
-genomes ([`docs/results/lineage/`](docs/results/lineage/)):
-
-| Sample | Pango lineage | Nextstrain clade | Substitutions vs Wuhan-Hu-1 | QC |
-|---|---|---|---|---|
-| SRR10903401 | B | 19A | 0 | pass |
-| SRR10903402 | B | 19A | 0 | pass |
-
-Both belong to the basal lineage B (clade 19A), the Wuhan-like ancestral group, consistent with early-2020 samples.
-This is a weakly informative result: lineage B is defined by the absence of later lineage-defining mutations, and
-the consensus carries none, so the assignment mostly confirms that the consensus equals the reference. The minor
-variants (such as `24323 A>C`) are below the consensus threshold and do not affect it. Versions of both tools and
-datasets are recorded in the result files because lineage names depend on the database release.
-
-### Validation of the variant calls
-
-Each LoFreq SNV is re-counted from the alignment with `bcftools mpileup` (different filters: no BAQ, MAPQ >= 20,
-base quality >= 20), with per-strand counts and a Fisher test for strand imbalance
-([`docs/results/variants_validated.tsv`](docs/results/variants_validated.tsv)).
-
-| Verdict | SRR10903401 | SRR10903402 |
-|---|---|---|
-| Supported (>= 3 alt reads, no strand bias) | 7 | 5 |
-| Unsupported (< 3 alt reads in the independent count) | 3 | 0 |
-| Indels (not assessed by this method) | 3 | 0 |
-| Strand bias | 0 | 0 |
+- Both consensus genomes are identical to Wuhan-Hu-1 (apart from low-coverage positions masked as `N`) and fall in the
+  basal lineage B, consistent with samples from the very start of the outbreak.
+- Most reads are not viral (host RNA), but the genome is small, so depth is still high enough for confident calling.
+- One minor variant stands out: `24323 A>C` in the Spike gene (p.Lys921Gln) in SRR10903401, at 39% frequency, confirmed
+  by an independent allele count with balanced strands. The other minor variants (5-10%) are weak evidence and are
+  treated cautiously; see [Limitations](#limitations).
 
 ![Coverage profile and variants](docs/results/coverage_and_variants.png)
 
+## Quick start
+
+```bash
+git clone https://github.com/BrunoFOmena/sars-cov2-variant-calling.git
+cd sars-cov2-variant-calling
+
+micromamba env create -f environment.yml      # about 10 GB on disk
+micromamba activate sars2-vc
+
+bash scripts/download_data.sh                 # ~80 MB, checksum-verified
+nextflow run main.nf -profile local           # ~1 min on 12 threads
+```
+
+Results are written to `results/`. Use `-profile conda` instead of activating the environment first and Nextflow will
+build it itself (tested from scratch: identical consensus, variants and lineage calls). The environment is large, so
+keep the work directory off a small `/tmp` partition (`-w /path/with/space`).
+
+## Pipeline
+
+```mermaid
+flowchart LR
+    A[Raw FASTQ] --> B[FastQC]
+    A --> C[fastp<br/>trim + filter]
+    C --> D[FastQC<br/>trimmed]
+    C --> E[BWA-MEM<br/>samtools sort]
+    E --> F[samtools stats<br/>mosdepth]
+    E --> G[LoFreq<br/>SNVs + indels]
+    G --> H[bcftools filter]
+    H --> I[SnpEff<br/>annotation]
+    H --> J[bcftools consensus<br/>mask low depth]
+    F --> J
+    J --> K[Pangolin<br/>Nextclade]
+    H --> L[bcftools mpileup<br/>independent counts]
+    E --> L
+    I --> M[Validation<br/>+ figures]
+    L --> M
+    F --> M
+    B & D & C & F & I --> N[MultiQC]
+```
+
+| Stage | Tool | Notes |
+|---|---|---|
+| Workflow | Nextflow (DSL2) | One module per stage in [`modules/`](modules/) |
+| Raw and trimmed QC | FastQC, MultiQC | Reports before and after trimming |
+| Trimming | fastp | Paired-end, adapter auto-detection, quality and length filters |
+| Alignment | BWA-MEM, samtools | Duplicates are not removed: positional duplicates are expected at this depth on a 30 kb genome |
+| Coverage | mosdepth, samtools stats | Per-base depth feeds the consensus mask and the figures |
+| Variant calling | LoFreq | Calls SNVs and indels with allele frequencies, suited to viral populations with minor variants |
+| Filtering | bcftools | QUAL ≥ 30, depth ≥ 10, allele frequency ≥ 0.05 |
+| Annotation | SnpEff | Gene and amino-acid effects on NC_045512.2 |
+| Consensus | bcftools consensus | Only variants with AF ≥ 0.5 applied; positions below 10x masked as `N` |
+| Lineage | Pangolin, Nextclade | Tool and dataset versions are recorded in the results |
+| Validation | bcftools mpileup, Python | Independent allele counts per strand, Fisher test for strand bias |
+
+All thresholds are parameters in [`nextflow.config`](nextflow.config).
+
+## Data and provenance
+
+| Item | Source | Details |
+|---|---|---|
+| Reads | SRA [SRR10903401](https://www.ncbi.nlm.nih.gov/sra/SRR10903401), [SRR10903402](https://www.ncbi.nlm.nih.gov/sra/SRR10903402) | Illumina MiSeq, paired-end, RNA-Seq of human clinical samples |
+| Reference | [NC_045512.2](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512.2) | Wuhan-Hu-1, 29,903 bp, FASTA and GFF3 |
+
+The reads come from [doi:10.1093/nsr/nwaa036](https://doi.org/10.1093/nsr/nwaa036) and are also the example dataset of
+the [V-pipe](https://cbg-ethz.github.io/V-pipe/) tutorial.
+
+`scripts/download_data.sh` fetches everything and writes [`data/MANIFEST.tsv`](data/MANIFEST.tsv) with source URL, size,
+checksum and retrieval date of each file. Reads are verified against the md5 reported by ENA; the reference is recorded
+with a sha256 (NCBI does not provide one). The FASTQ files are not committed, but the manifest is, so any download can
+be checked against what was analysed.
+
+## Results
+
+### Dataset check
+
+Raw-read QC ([MultiQC report](docs/qc/multiqc_raw.html)) and a quick mapping
+([table](docs/qc/mapping_summary.tsv), produced by `scripts/qc_raw_and_mapping_check.sh`) were used to decide whether the
+dataset was suitable before building the pipeline.
+
+- Only 3-8% of reads map to SARS-CoV-2, as expected from metatranscriptomic data, yet both samples cover essentially
+  the whole genome at ≥30x. An amplicon-sequencing dataset (ARTIC) was considered as an alternative and was not needed.
+- FastQC flags adapter content and duplication in all files, which motivates the trimming step. Per-base quality passes.
+
+### Variants
+
+Annotated tables are in [`docs/results/`](docs/results/) (`*.variants.tsv`), merged with the validation columns in
+[`variants_validated.tsv`](docs/results/variants_validated.tsv). The comparison of the two samples is in
+[`sample_comparison.tsv`](docs/results/sample_comparison.tsv): only `1821 G>A` is shared.
+
+### Validation of the calls
+
+Each LoFreq SNV is re-counted from the alignment with `bcftools mpileup` (no BAQ, MAPQ ≥ 20, base quality ≥ 20) with
+per-strand counts.
+
+| Verdict | SRR10903401 | SRR10903402 |
+|---|---|---|
+| Supported (≥3 alt reads, no strand bias) | 7 | 5 |
+| Unsupported (<3 alt reads in the independent count) | 3 | 0 |
+| Indels (not assessed by this method) | 3 | 0 |
+| Strand bias | 0 | 0 |
+
 ![LoFreq vs pileup allele frequency](docs/results/af_concordance.png)
 
-- Allele frequencies from the two methods agree closely (second figure), and `24323 A>C` (Spike p.Lys921Gln) holds up
-  with a balanced strand distribution (40 forward / 46 reverse alt reads).
-- Coverage is uneven but above 10x everywhere except a few positions (masked as `N`). It rises sharply at the 3' end,
-  which is expected in coronavirus RNA-seq because of subgenomic RNAs.
-- **Limit of this check:** it re-reads the same alignment, so it validates the caller, the filters and strand balance,
-  but not artifacts introduced earlier (reverse transcription, library preparation). Only an independent library or
-  replicate would address that. The comparison between samples ([`sample_comparison.tsv`](docs/results/sample_comparison.tsv))
-  shares only `1821 G>A`, and both samples come from the same study, so that overlap could also be systematic.
-- Indel calls, including the frameshifts, were not validated here and remain the least trustworthy results.
+The two methods agree closely on allele frequency. Coverage is uneven, drops at a few positions (masked as `N`) and
+rises sharply at the 3' end, which is expected in coronavirus RNA-seq because of subgenomic RNAs.
 
-## Compute budget
+### Lineage
 
-Measured on the development machine (WSL2 on Windows):
+Pangolin 4.4 (data v1.41) and Nextclade 3.29.1 (dataset 2026-10-28) assign both samples to **Pango B / Nextstrain 19A**
+with zero substitutions against Wuhan-Hu-1 ([`docs/results/lineage/`](docs/results/lineage/)). This is weakly
+informative: lineage B is defined by the absence of later lineage-defining mutations, so the result mostly confirms
+that the consensus equals the reference.
 
-| Resource | Available | Needed by this project |
-|---|---|---|
-| CPU | Intel i5-12450HX, 12 threads | 4-8 threads is plenty |
-| RAM | 7.6 GB (+2 GB swap) | < 2 GB (a 30 kb genome index is tiny) |
-| Disk | ~940 GB free in WSL | < 1 GB including raw data and intermediates |
-| GPU | RTX 3050 6 GB | Not used (no step benefits from it) |
-| Network | OK | ~80 MB of downloads |
+## Limitations
 
-**Conclusion:** the whole dataset fits comfortably on this laptop. No cloud or HPC resources are required, and
-the full pipeline should finish in a few minutes. Since compute is not a constraint, the effort goes into
-analysis quality (QC, filtering, annotation, interpretation) rather than into scaling.
+- **Low-frequency calls are weak evidence.** Most minor variants sit at 5-10% frequency, a range where reverse
+  transcription errors and sequencing artifacts also appear in RNA-seq data. They should not be read as real
+  intra-host variation. `1821 G>A` appears in both samples, but both come from the same study, so the overlap could
+  be systematic.
+- **The validation re-reads the same alignment.** It checks the caller, the filters and strand balance, not artifacts
+  introduced earlier (reverse transcription, library preparation). Only a replicate or an independent library would.
+- **Indels are not validated.** The two frameshifts and the stop-gain, all at low frequency, are the least trustworthy
+  calls.
+- **No biological replicates**, and only two samples, so no population-level conclusions can be drawn.
+- **Host contamination** is high; the pipeline does not filter host reads, which is harmless here but would matter for
+  lower-depth samples.
 
-## Strategy
+## Compute
 
-```
-SRA (ENA mirror) ──► raw FASTQ (R1/R2)
-                         │
-                         ▼
-              FastQC / MultiQC (raw)
-                         │
-                         ▼
-          fastp: paired-end trimming + filtering
-                         │
-                         ▼
-              FastQC / MultiQC (trimmed)
-                         │
-                         ▼
-        BWA-MEM2 (or bwa mem) ──► samtools sort/index
-                         │
-                         ▼
-     samtools stats / flagstat / depth, mosdepth
-                         │
-                         ▼
-        LoFreq variant calling (low-frequency aware)
-                         │
-                         ▼
-    bcftools filter ──► SnpEff annotation (NC_045512.2)
-                         │
-                    ┌────┴─────┐
-                    ▼          ▼
-        bcftools consensus   Pangolin / Nextclade
-        (mask depth < 10x)   (lineage / clade)
-                         │
-                         ▼
-        Summary tables + plots (Python / R)
-```
+Measured on a laptop (Intel i5-12450HX, 12 threads, 7.6 GB RAM, WSL2):
 
-### Stages
-
-1. **Data retrieval.** Download FASTQ from the ENA mirror of the SRA accessions (plain HTTPS, no `sra-tools`
-   needed) and the reference FASTA/GFF from NCBI. Checksums are recorded.
-2. **Raw QC.** FastQC per file, aggregated with MultiQC.
-3. **Trimming and filtering.** `fastp` in paired-end mode: adapter auto-detection, quality trimming, length
-   filter, pair-aware. Its JSON/HTML report is kept.
-4. **Alignment.** Map to NC_045512.2, sort and index. Duplicates are *not* blindly removed, since amplicon-like or
-   very high coverage in a tiny genome makes position-based duplicate removal misleading; this decision will be
-   justified in the report.
-5. **Alignment QC.** Mapping rate, mean depth, % genome at >=10x/>=30x, depth profile along the genome.
-6. **Variant calling.** `LoFreq` for SNVs and indels with allele frequencies (suited to viral populations where
-   minor variants matter). Optionally cross-checked with `bcftools mpileup | call` as an independent caller to
-   report concordance.
-7. **Filtering and annotation.** Filter on depth, quality and allele frequency; annotate effects on genes with
-   SnpEff using the Wuhan-Hu-1 annotation (e.g. S, ORF1ab, N).
-8. **Consensus and lineage.** Build a consensus genome with low-coverage positions masked as `N`, then assign
-   lineage/clade with Pangolin and Nextclade.
-9. **Reporting.** Per-sample variant tables, allele frequency distribution, genome-wide coverage plot and a final
-   summary table.
-
-### Tools
-
-| Purpose | Tool |
+| | |
 |---|---|
-| Workflow manager | Nextflow (DSL2) |
-| Environment | Conda (via micromamba, already installed) with bioconda/conda-forge, pinned in `environment.yml` |
-| QC | FastQC, MultiQC, fastp |
-| Alignment | BWA-MEM2 / BWA, samtools, mosdepth |
-| Variants | LoFreq, bcftools |
-| Annotation | SnpEff |
-| Lineage | Pangolin, Nextclade |
-| Plots | Python (matplotlib/pandas) |
+| Clean run, both samples | ~53 s, 22 processes |
+| Peak memory of any process | ~1.3 GB |
+| Disk | ~170 MB for data and results, ~10 GB for the conda environment |
+| GPU | not used |
 
-### Planned repository layout
+## Repository layout
 
 ```
 .
-├── README.md
-├── environment.yml        # pinned conda environment
-├── main.nf                # Nextflow workflow definition
-├── nextflow.config        # accessions, paths, thresholds, profiles
-├── modules/               # one process module per tool
-├── bin/                   # plotting and summary helper scripts
-├── scripts/               # setup helpers (data download)
+├── main.nf                  # workflow definition
+├── nextflow.config          # parameters (thresholds, paths) and profiles
+├── modules/                 # one Nextflow module per stage
+├── bin/validate_and_plot.py # validation, sample comparison and figures
+├── scripts/
+│   ├── download_data.sh               # data download with checksums
+│   └── qc_raw_and_mapping_check.sh    # exploratory dataset check
+├── environment.yml          # tools (conda)
+├── environment.lock.yml     # exact resolved versions
 ├── data/
-│   ├── raw/               # raw FASTQ files (git-ignored, restored by the download script)
-│   ├── reference/         # NC_045512.2 FASTA + GFF3 (tracked)
-│   └── MANIFEST.tsv       # source URL, size, checksum and date of every file (tracked)
-├── results/               # pipeline outputs (large files git-ignored)
-└── docs/                  # figures and report used in the README
+│   ├── MANIFEST.tsv         # provenance of every downloaded file
+│   └── reference/           # NC_045512.2 FASTA + GFF3
+├── docs/
+│   ├── qc/                  # raw-read QC and mapping check
+│   └── results/             # variant tables, consensus FASTAs, figures, lineage, MultiQC, run trace
+└── LICENSE
 ```
 
-## Expected deliverables (for the portfolio)
+`data/raw/`, `results/`, `work/` and Nextflow caches are git-ignored and recreated by the pipeline.
 
-- MultiQC report before and after trimming.
-- Genome coverage/depth plot for each sample.
-- Annotated VCF and a readable variant table (position, ref/alt, gene, amino-acid change, allele frequency).
-- Consensus FASTA and lineage/clade call.
-- Comparison of the two samples (shared vs. private variants).
-- A short interpretation section, including limitations (host contamination, low-frequency variant calls,
-  no biological replicates).
+## Possible extensions
 
-## Roadmap
-
-- [x] Assess hardware and dataset size
-- [x] Verify accessions (SRR10903401, SRR10903402, NC_045512.2)
-- [x] Set up the conda environment
-- [x] Data download script (`scripts/download_data.sh`)
-- [x] Raw QC and exploratory mapping check (`scripts/qc_raw_and_mapping_check.sh`)
-- [x] Nextflow pipeline: fastp trimming, BWA alignment, alignment QC, LoFreq calling, SnpEff annotation, consensus, MultiQC
-- [x] Lineage assignment (Pangolin / Nextclade)
-- [x] Independent allele counting (bcftools mpileup) with strand-bias check
-- [x] Figures (coverage profile, allele-frequency concordance) and sample comparison
-
-## Reproducibility
-
-Once implemented, the whole analysis will be run with:
-
-```bash
-micromamba env create -f environment.yml
-micromamba activate sars2-vc
-nextflow run main.nf -profile conda
-```
+- Validate indels with a second caller or with the read-level alignment.
+- Add an amplicon-based dataset (ARTIC) with primer trimming.
+- Run on more samples to compare variant patterns across a cohort.
 
 ## References
 
 - Dataset publication: [doi:10.1093/nsr/nwaa036](https://doi.org/10.1093/nsr/nwaa036)
 - Reference genome: [NC_045512.2](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512.2)
 - V-pipe tutorial dataset: <https://cbg-ethz.github.io/V-pipe/tutorial/sars-cov2/>
+
+## License
+
+Released under the [MIT License](LICENSE).
