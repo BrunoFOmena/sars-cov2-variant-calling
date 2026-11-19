@@ -1,5 +1,5 @@
 data/raw/
-results/
+/results/
 work/
 .nextflow*
 data/reference/*.fasta.*
