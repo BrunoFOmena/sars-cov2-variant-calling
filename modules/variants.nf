@@ -74,8 +74,8 @@ process CONSENSUS {
     path reference
 
     output:
-    path "${sample}.consensus.fasta"
-    path "${sample}.low_coverage.bed"
+    path "${sample}.consensus.fasta", emit: fasta
+    path "${sample}.low_coverage.bed", emit: low_coverage
 
     script:
     """

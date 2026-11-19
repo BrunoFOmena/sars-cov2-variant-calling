@@ -81,8 +81,7 @@ report and the Nextflow trace.
 ### Interpretation (and what it does not show)
 
 - **Both consensus genomes are identical to Wuhan-Hu-1** apart from masked positions: no variant reached 50% allele
-  frequency. This fits samples from the very beginning of the outbreak, but lineage assignment is still pending, so
-  this is an expectation to confirm and not a result yet.
+  frequency. This fits samples from the very beginning of the outbreak, and the lineage assignment below confirms it.
 - **All reported variants are minor (sub-clonal) variants**, mostly at 5-10% frequency. In RNA-seq data from clinical
   samples, reverse-transcription errors and sequencing artifacts also produce calls in this range, so these should not
   be read as real intra-host variation without further evidence. The shared call `1821 G>A` (p.Gly519Asp) appearing in
@@ -92,6 +91,22 @@ report and the Nextflow trace.
   it still needs a second caller and a look at the alignment before it is trusted.
 - The high-impact calls (a stop-gain at AF 0.057 and two frameshifts at AF 0.057 and 0.125) are exactly the kind of
   low-frequency indel/stop events most likely to be artifacts.
+
+### Lineage assignment
+
+Pangolin 4.4 (data release v1.41) and Nextclade 3.29.1 (dataset tag 2026-10-28--15-04-26Z), run on the consensus
+genomes ([`docs/results/lineage/`](docs/results/lineage/)):
+
+| Sample | Pango lineage | Nextstrain clade | Substitutions vs Wuhan-Hu-1 | QC |
+|---|---|---|---|---|
+| SRR10903401 | B | 19A | 0 | pass |
+| SRR10903402 | B | 19A | 0 | pass |
+
+Both belong to the basal lineage B (clade 19A), the Wuhan-like ancestral group, consistent with early-2020 samples.
+This is a weakly informative result: lineage B is defined by the absence of later lineage-defining mutations, and
+the consensus carries none, so the assignment mostly confirms that the consensus equals the reference. The minor
+variants (such as `24323 A>C`) are below the consensus threshold and do not affect it. Versions of both tools and
+datasets are recorded in the result files because lineage names depend on the database release.
 
 ### Validation of the variant calls
 
@@ -242,7 +257,7 @@ SRA (ENA mirror) ──► raw FASTQ (R1/R2)
 - [x] Data download script (`scripts/download_data.sh`)
 - [x] Raw QC and exploratory mapping check (`scripts/qc_raw_and_mapping_check.sh`)
 - [x] Nextflow pipeline: fastp trimming, BWA alignment, alignment QC, LoFreq calling, SnpEff annotation, consensus, MultiQC
-- [ ] Lineage assignment (Pangolin / Nextclade)
+- [x] Lineage assignment (Pangolin / Nextclade)
 - [x] Independent allele counting (bcftools mpileup) with strand-bias check
 - [x] Figures (coverage profile, allele-frequency concordance) and sample comparison
 
