@@ -90,3 +90,29 @@ process CONSENSUS {
         | sed "1s/.*/>${sample}/" > ${sample}.consensus.fasta
     """
 }
+
+// Independent allele counts from the raw pileup at every called SNV position.
+// Uses different filters than LoFreq (no BAQ, MAPQ>=20, baseQ>=20) and reports
+// per-strand counts so strand bias can be checked.
+process PILEUP_CHECK {
+    tag "${sample}"
+    publishDir { "${params.outdir}/validation/${sample}" }, mode: 'copy'
+
+    input:
+    tuple val(sample), path(vcf), path(tbi), path(bam), path(bai)
+    path reference
+
+    output:
+    tuple val(sample), path("${sample}.pileup_counts.tsv")
+
+    script:
+    """
+    bcftools query -f '%CHROM\\t%POS\\n' ${vcf} > positions.tsv
+    if [ -s positions.tsv ]; then
+      bcftools mpileup -f ${reference} -R positions.tsv -I -B -q 20 -Q 20 -d 100000 -a AD,ADF,ADR -Ou ${bam} \\
+        | bcftools query -f '%POS\\t%REF\\t%ALT\\t[%AD]\\t[%ADF]\\t[%ADR]\\n' > ${sample}.pileup_counts.tsv
+    else
+      : > ${sample}.pileup_counts.tsv
+    fi
+    """
+}

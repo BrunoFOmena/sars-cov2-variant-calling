@@ -92,8 +92,33 @@ report and the Nextflow trace.
   it still needs a second caller and a look at the alignment before it is trusted.
 - The high-impact calls (a stop-gain at AF 0.057 and two frameshifts at AF 0.057 and 0.125) are exactly the kind of
   low-frequency indel/stop events most likely to be artifacts.
-- Next validation steps: an independent caller (bcftools), strand-bias inspection, and a stricter frequency threshold
-  as a sensitivity analysis.
+
+### Validation of the variant calls
+
+Each LoFreq SNV is re-counted from the alignment with `bcftools mpileup` (different filters: no BAQ, MAPQ >= 20,
+base quality >= 20), with per-strand counts and a Fisher test for strand imbalance
+([`docs/results/variants_validated.tsv`](docs/results/variants_validated.tsv)).
+
+| Verdict | SRR10903401 | SRR10903402 |
+|---|---|---|
+| Supported (>= 3 alt reads, no strand bias) | 7 | 5 |
+| Unsupported (< 3 alt reads in the independent count) | 3 | 0 |
+| Indels (not assessed by this method) | 3 | 0 |
+| Strand bias | 0 | 0 |
+
+![Coverage profile and variants](docs/results/coverage_and_variants.png)
+
+![LoFreq vs pileup allele frequency](docs/results/af_concordance.png)
+
+- Allele frequencies from the two methods agree closely (second figure), and `24323 A>C` (Spike p.Lys921Gln) holds up
+  with a balanced strand distribution (40 forward / 46 reverse alt reads).
+- Coverage is uneven but above 10x everywhere except a few positions (masked as `N`). It rises sharply at the 3' end,
+  which is expected in coronavirus RNA-seq because of subgenomic RNAs.
+- **Limit of this check:** it re-reads the same alignment, so it validates the caller, the filters and strand balance,
+  but not artifacts introduced earlier (reverse transcription, library preparation). Only an independent library or
+  replicate would address that. The comparison between samples ([`sample_comparison.tsv`](docs/results/sample_comparison.tsv))
+  shares only `1821 G>A`, and both samples come from the same study, so that overlap could also be systematic.
+- Indel calls, including the frameshifts, were not validated here and remain the least trustworthy results.
 
 ## Compute budget
 
@@ -218,8 +243,8 @@ SRA (ENA mirror) ──► raw FASTQ (R1/R2)
 - [x] Raw QC and exploratory mapping check (`scripts/qc_raw_and_mapping_check.sh`)
 - [x] Nextflow pipeline: fastp trimming, BWA alignment, alignment QC, LoFreq calling, SnpEff annotation, consensus, MultiQC
 - [ ] Lineage assignment (Pangolin / Nextclade)
-- [ ] Cross-check with an independent caller (bcftools)
-- [ ] Figures (coverage profile, allele-frequency plot) and sample comparison
+- [x] Independent allele counting (bcftools mpileup) with strand-bias check
+- [x] Figures (coverage profile, allele-frequency concordance) and sample comparison
 
 ## Reproducibility
 

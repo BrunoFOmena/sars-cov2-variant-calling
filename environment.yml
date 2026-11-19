@@ -18,5 +18,6 @@ dependencies:
   - pangolin
   - python=3.11
   - pandas
+  - scipy
   - matplotlib
   - seaborn

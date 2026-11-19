@@ -5,7 +5,8 @@ include { FASTQC as FASTQC_RAW     } from './modules/qc'
 include { FASTQC as FASTQC_TRIMMED } from './modules/qc'
 include { FASTP; MULTIQC           } from './modules/qc'
 include { BWA_INDEX; BWA_MEM; ALIGNMENT_STATS; MOSDEPTH } from './modules/align'
-include { LOFREQ; FILTER_VARIANTS; SNPEFF; CONSENSUS    } from './modules/variants'
+include { LOFREQ; FILTER_VARIANTS; SNPEFF; CONSENSUS; PILEUP_CHECK } from './modules/variants'
+include { VALIDATE_AND_PLOT } from './modules/report'
 
 workflow {
     reads_ch = channel.fromFilePairs(params.reads, checkIfExists: true)
@@ -28,6 +29,16 @@ workflow {
         .map { sample, vcf, tbi -> [sample, vcf, tbi] }
         .join(MOSDEPTH.out.per_base.map { f -> [f.name.replace('.per-base.bed.gz', ''), f] })
     CONSENSUS(consensus_in, reference)
+
+    PILEUP_CHECK(FILTER_VARIANTS.out.join(BWA_MEM.out), reference)
+
+    VALIDATE_AND_PLOT(
+        SNPEFF.out.table.mix(
+            PILEUP_CHECK.out.map { sample, f -> f },
+            MOSDEPTH.out.per_base
+        ).collect(),
+        file(params.gff, checkIfExists: true)
+    )
 
     MULTIQC(
         FASTQC_RAW.out.mix(FASTQC_TRIMMED.out)
