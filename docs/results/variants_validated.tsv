@@ -1,0 +1,19 @@
+sample	position	ref	alt	depth	allele_freq	qual	effect	impact	gene	protein_change	af_pileup	alt_fwd	alt_rev	ref_fwd	ref_rev	strand_p	validation
+SRR10903401	1821	G	A	95	0.095	149	missense_variant	MODERATE	ORF1ab	p.Gly519Asp	0.0877	5.0	0.0	29.0	23.0	0.0745	supported
+SRR10903401	5210	G	T	86	0.058	74	missense_variant	MODERATE	ORF1ab	p.Ala1649Ser	0.0806	3.0	2.0	30.0	27.0	1.0	supported
+SRR10903401	5702	C	T	247	0.057	196	stop_gained	HIGH	ORF1ab	p.Gln1813*	0.0464	4.0	3.0	66.0	78.0	0.7047	supported
+SRR10903401	8976	A	G	58	0.069	61	missense_variant	MODERATE	ORF1ab	p.Glu2904Gly	0.0588	2.0	0.0	17.0	15.0	0.492	unsupported
+SRR10903401	9554	GT	G	35	0.057	57	frameshift_variant	HIGH	ORF1ab	p.Tyr3098fs							indel (not assessed)
+SRR10903401	11074	CT	C	80	0.125	187	frameshift_variant	HIGH	ORF1ab	p.Leu3606fs							indel (not assessed)
+SRR10903401	13075	T	C	111	0.054	86	synonymous_variant	LOW	ORF1ab	p.Cys4270Cys	0.0441	2.0	1.0	29.0	36.0	0.588	supported
+SRR10903401	19164	C	T	89	0.191	331	synonymous_variant	LOW	ORF1ab	p.Asp6300Asp	0.2143	5.0	7.0	22.0	22.0	0.7482	supported
+SRR10903401	20235	C	A	69	0.058	60	synonymous_variant	LOW	ORF1ab	p.Pro6657Pro	0.0408	2.0	0.0	26.0	21.0	0.5	unsupported
+SRR10903401	22270	T	C	190	0.053	112	synonymous_variant	LOW	S	p.Thr236Thr	0.0702	2.0	6.0	42.0	64.0	0.4826	supported
+SRR10903401	24323	A	C	319	0.389	2784	missense_variant	MODERATE	S	p.Lys921Gln	0.3945	40.0	46.0	64.0	68.0	0.7834	supported
+SRR10903401	26493	GT	G	18	0.111	50	upstream_gene_variant	MODIFIER	M								indel (not assessed)
+SRR10903401	26590	T	C	19	0.211	81	missense_variant	MODERATE	M	p.Val23Ala	0.1667	2.0	0.0	3.0	7.0	0.1515	unsupported
+SRR10903402	1821	G	A	374	0.053	271	missense_variant	MODERATE	ORF1ab	p.Gly519Asp	0.0605	7.0	6.0	110.0	92.0	1.0	supported
+SRR10903402	10779	T	A	335	0.081	381	missense_variant	MODERATE	ORF1ab	p.Leu3505Gln	0.0909	6.0	15.0	82.0	128.0	0.4805	supported
+SRR10903402	11367	A	T	247	0.065	233	missense_variant	MODERATE	ORF1ab	p.Tyr3701Phe	0.0667	6.0	4.0	60.0	80.0	0.3364	supported
+SRR10903402	11563	C	T	391	0.148	1035	synonymous_variant	LOW	ORF1ab	p.Cys3766Cys	0.1389	19.0	16.0	118.0	99.0	1.0	supported
+SRR10903402	13693	A	T	347	0.061	285	missense_variant	MODERATE	ORF1ab	p.Thr4477Ser	0.0583	8.0	5.0	133.0	77.0	1.0	supported

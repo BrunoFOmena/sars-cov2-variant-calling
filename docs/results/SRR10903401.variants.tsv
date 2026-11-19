@@ -1,0 +1,14 @@
+sample	position	ref	alt	depth	allele_freq	qual	effect	impact	gene	protein_change
+SRR10903401	1821	G	A	95	0.095	149	missense_variant	MODERATE	ORF1ab	p.Gly519Asp
+SRR10903401	5210	G	T	86	0.058	74	missense_variant	MODERATE	ORF1ab	p.Ala1649Ser
+SRR10903401	5702	C	T	247	0.057	196	stop_gained	HIGH	ORF1ab	p.Gln1813*
+SRR10903401	8976	A	G	58	0.069	61	missense_variant	MODERATE	ORF1ab	p.Glu2904Gly
+SRR10903401	9554	GT	G	35	0.057	57	frameshift_variant	HIGH	ORF1ab	p.Tyr3098fs
+SRR10903401	11074	CT	C	80	0.125	187	frameshift_variant	HIGH	ORF1ab	p.Leu3606fs
+SRR10903401	13075	T	C	111	0.054	86	synonymous_variant	LOW	ORF1ab	p.Cys4270Cys
+SRR10903401	19164	C	T	89	0.191	331	synonymous_variant	LOW	ORF1ab	p.Asp6300Asp
+SRR10903401	20235	C	A	69	0.058	60	synonymous_variant	LOW	ORF1ab	p.Pro6657Pro
+SRR10903401	22270	T	C	190	0.053	112	synonymous_variant	LOW	S	p.Thr236Thr
+SRR10903401	24323	A	C	319	0.389	2784	missense_variant	MODERATE	S	p.Lys921Gln
+SRR10903401	26493	GT	G	18	0.111	50	upstream_gene_variant	MODIFIER	M	
+SRR10903401	26590	T	C	19	0.211	81	missense_variant	MODERATE	M	p.Val23Ala
